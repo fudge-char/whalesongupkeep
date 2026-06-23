@@ -222,6 +222,16 @@
 
     .card-notes { font-size: 10px; color: var(--muted); line-height: 1.5; border-top: 1px solid var(--border); padding-top: 6px; }
 
+    /* Cost row */
+    .card-costs {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 4px 10px; border-top: 1px solid var(--border); padding-top: 7px;
+    }
+    .cost-item { display: flex; flex-direction: column; gap: 1px; }
+    .cost-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: #b0b8c4; }
+    .cost-value { font-size: 11px; color: var(--text); font-variant-numeric: tabular-nums; }
+    .cost-value.na { color: #c8cbd2; font-style: italic; }
+
     /* ── States ── */
     #loading-state, #error-state, #empty-state {
       display: none; text-align: center; padding: 40px 24px; color: var(--muted); font-size: 13px;
@@ -330,6 +340,7 @@
         <input type="text" id="search-input" placeholder="Search task or note…">
         <button class="filter-preset-btn" id="btn-attention">📌 Needs attention</button>
         <button class="filter-preset-btn" id="btn-showcomplete">✓ Show completed</button>
+        <button class="filter-preset-btn" id="btn-hascost">💲 Has Cost</button>
         <button class="filter-reset-btn" id="reset-btn">Reset</button>
       </div>
       <div class="filter-row" id="row-owner"><span class="filter-row-label">OWNER</span></div>
@@ -372,7 +383,7 @@ const filters = {
   search: '', owners: new Set(), priorities: new Set(),
   statuses: new Set(), types: new Set(), zones: new Set(),
   date: 'all',   // 'all' | 'thismonth' | 'startweek' | 'endweek' | 'nodate'
-  showComplete: false, needsAttention: false,
+  showComplete: false, needsAttention: false, hasCost: false,
 };
 
 // ── CSV ────────────────────────────────────────────────────────
@@ -421,6 +432,7 @@ const isBlocked     = i => ['onhold','materialsblock','questions'].some(x => n(i
 const isOpen        = i => !isComplete(i) && !isBlocked(i);
 const isAttention   = i => !isComplete(i) && (['critical','high'].includes((i.Priority||'').toLowerCase()) || isBlocked(i));
 const isNoDate      = i => !i['Scheduled Start'] || !i['Est Completion Date'];
+const hasCostData   = i => !!(i['Labor Cost'] || i['Materials']);
 const isStartWeek   = i => inThisWeek(i['Scheduled Start']);
 const isEndWeek     = i => inThisWeek(i['Est Completion Date']);
 const isThisWeek    = i => isStartWeek(i) || isEndWeek(i);
@@ -448,6 +460,7 @@ function isVisible(item) {
   if (filters.types.size      && !filters.types.has(item.Type))        return false;
   if (filters.zones.size      && !filters.zones.has(item.Location))    return false;
   if (!pasesDateFilter(item)) return false;
+  if (filters.hasCost && !hasCostData(item)) return false;
   return true;
 }
 
@@ -632,6 +645,12 @@ function priorityCls(p) {
   return { critical:'badge-critical', high:'badge-high', medium:'badge-medium', low:'badge-low' }[(p||'').toLowerCase()] || '';
 }
 function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmtCost(s) {
+  if (!s) return null;
+  const num = parseFloat(s.toString().replace(/[$,]/g, ''));
+  if (isNaN(num)) return null;
+  return num.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
+}
 
 // ── Render cards ───────────────────────────────────────────────
 const PRIORITY_LABELS = ['Critical','High','Medium','Low','—'];
@@ -683,6 +702,16 @@ function renderCards() {
           <div class="date-item"><div class="date-label">Start</div><div class="date-value">${startLbl}</div></div>
           <div class="date-item"><div class="date-label">End</div><div class="date-value">${endLbl}</div></div>
         </div>
+        <div class="card-costs">
+          <div class="cost-item">
+            <div class="cost-label">Labor Cost</div>
+            <div class="cost-value${fmtCost(item['Labor Cost']) ? '' : ' na'}">${fmtCost(item['Labor Cost']) || 'NA'}</div>
+          </div>
+          <div class="cost-item">
+            <div class="cost-label">Materials Cost</div>
+            <div class="cost-value${fmtCost(item['Materials']) ? '' : ' na'}">${fmtCost(item['Materials']) || 'NA'}</div>
+          </div>
+        </div>
         ${item.Notes ? `<div class="card-notes">${esc(item.Notes)}</div>` : ''}
       </div>`;
     }).join('');
@@ -731,12 +760,13 @@ async function fetchData() {
 function clearAllFilters(skipRender) {
   filters.search = ''; filters.owners.clear(); filters.priorities.clear();
   filters.statuses.clear(); filters.types.clear(); filters.zones.clear();
-  filters.date = 'all'; filters.showComplete = false; filters.needsAttention = false;
+  filters.date = 'all'; filters.showComplete = false; filters.needsAttention = false; filters.hasCost = false;
   activeStatCard = null;
   document.getElementById('search-input').value = '';
   document.querySelectorAll('.fchip').forEach(c => c.classList.toggle('active', c.dataset.date === 'all'));
   document.getElementById('btn-attention').classList.remove('active');
   document.getElementById('btn-showcomplete').classList.remove('active');
+  document.getElementById('btn-hascost').classList.remove('active');
   updateStatCardActive();
   if (!skipRender) render();
 }
@@ -752,6 +782,10 @@ document.getElementById('btn-attention').addEventListener('click', function() {
 document.getElementById('btn-showcomplete').addEventListener('click', function() {
   filters.showComplete = !filters.showComplete; this.classList.toggle('active', filters.showComplete);
   render();
+});
+document.getElementById('btn-hascost').addEventListener('click', function() {
+  filters.hasCost = !filters.hasCost; this.classList.toggle('active', filters.hasCost);
+  render(); if (filters.hasCost) scrollToQueue();
 });
 document.getElementById('reset-btn').addEventListener('click', () => clearAllFilters(false));
 document.getElementById('refresh-btn').addEventListener('click', fetchData);
