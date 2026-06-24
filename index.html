@@ -921,7 +921,10 @@ async function fetchData(){
   try{
     const res=await fetch(CSV_URL,{cache:'no-store'});
     if(!res.ok)throw new Error('HTTP '+res.status);
-    allItems=rowsToObjects(parseCSV(await res.text())).filter(i=>i.Task);
+    const parsed=rowsToObjects(parseCSV(await res.text()));
+    // Normalise first-column header regardless of sheet name
+    parsed.forEach(i=>{ if(!i.Task&&i['Column 1']) i.Task=i['Column 1']; });
+    allItems=parsed.filter(i=>i.Task);
     document.getElementById('loading-state').classList.remove('visible');
     buildFilterRows();updateStats();updateBanners();updateCharts();render();populateOwnerDropdown();
     if(currentPage==='schedule')renderGantt();
