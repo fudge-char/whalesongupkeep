@@ -148,15 +148,15 @@
     .gantt-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); }
     .gantt-table  { min-width: 100%; border-collapse: collapse; }
     .gantt-table th { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--muted); background: #f9fafb; border-bottom: 1px solid var(--border); padding: 6px 4px; text-align: center; white-space: nowrap; }
-    .gantt-table th.name-col { text-align: left; padding-left: 12px; min-width: 160px; width: 160px; position: sticky; left: 0; background: #f9fafb; z-index: 2; border-right: 1px solid var(--border); }
-    .gantt-table td { border-bottom: 1px solid #f3f4f6; padding: 0; height: 34px; }
-    .gantt-table td.name-col { padding: 0 8px 0 12px; font-size: 11px; font-weight: 500; color: var(--text); position: sticky; left: 0; background: var(--card); z-index: 1; border-right: 1px solid var(--border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
+    .gantt-table th.name-col { text-align: left; padding-left: 8px; min-width: 60px; width: 60px; position: sticky; left: 0; background: #f9fafb; z-index: 2; border-right: 1px solid var(--border); }
+    .gantt-table td { border-bottom: 1px solid #f3f4f6; padding: 0; height: 36px; }
+    .gantt-table td.name-col { padding: 0; font-size: 11px; font-weight: 500; color: var(--text); position: sticky; left: 0; background: var(--card); z-index: 3; border-right: 1px solid var(--border); min-width: 60px; width: 60px; }
     .gantt-table tr:last-child td { border-bottom: none; }
     .gantt-table tr:hover td, .gantt-table tr:hover td.name-col { background: #fafafa; }
-    .gantt-day-cell { width: 26px; min-width: 26px; position: relative; vertical-align: middle; }
-    .gantt-day-cell.today-col { background: rgba(37,99,235,.04); }
+    .gantt-day-cell { width: 26px; min-width: 26px; position: relative; vertical-align: middle; overflow: visible; }
+    .gantt-day-cell.today-col { background: rgba(234,179,8,.12); }
     .gantt-bar-seg {
-      height: 18px; display: block; margin: 0 1px; opacity: .9; border-radius: 3px;
+      height: 28px; display: block; margin: 0 1px; opacity: .95; border-radius: 3px;
     }
     .gantt-bar-seg:hover { opacity: 1; }
     .bar-start  { border-radius: 3px 0 0 3px; margin-right: 0; }
@@ -171,7 +171,7 @@
     .pbar-questions  { background: #3b82f6; }
     .pbar-inplanning { background: #fbbf24; }
     .pbar-default    { background: #d1d5db; }
-    .gantt-today-hdr { background: rgba(37,99,235,.15) !important; color: var(--blue) !important; font-weight: 800 !important; }
+    .gantt-today-hdr { background: rgba(234,179,8,.25) !important; color: #92400e !important; font-weight: 800 !important; }
     .gantt-empty { text-align: center; padding: 40px; color: var(--muted); font-size: 13px; }
 
     /* ── Executive Summary ── */
@@ -769,7 +769,7 @@ function renderGantt(){
   }else{
     ownerNames.forEach(owner=>{
       const group=ownerGroups[owner];
-      html+=`<tr class="gantt-owner-row"><td class="gantt-owner-cell" colspan="${dim+1}">${esc(owner)} <span style="font-weight:400;opacity:.6">${group.length} task${group.length!==1?'s':''}</span></td></tr>`;
+      html+=`<tr class="gantt-owner-row"><td class="gantt-owner-cell" colspan="${dim+1}">${esc(owner)} <span style="font-weight:400;opacity:.6">(${group.length})</span></td></tr>`;
       group.forEach(item=>{
         const s=parseDate(item['Scheduled Start']),e=parseDate(item['Est Completion Date']);
         let bs,be,cL=false,cR=false;
@@ -782,6 +782,8 @@ function renderGantt(){
         const barColor=ganttBarColor(item);
         const txtColor=ganttPriorityTextColor(item);
         const ttip=`${item.Task} | ${item.Status} | ${item.Priority||'—'} | ${item.Owner||'—'}`;
+        const barCells=be-bs+1;
+        const txtSpan=`<span style="position:absolute;left:4px;top:50%;transform:translateY(-50%);max-width:calc(${barCells}*26px - 8px);overflow:hidden;white-space:nowrap;font-size:11px;font-weight:700;color:${txtColor};z-index:5;pointer-events:none;line-height:1">${esc(item.Task)}</span>`;
         html+=`<tr><td class="name-col" style="background:var(--bg)"></td>`;
         days.forEach(d=>{
           const isTd=d===todayDay;
@@ -791,7 +793,7 @@ function renderGantt(){
             cls+=iF&&iL?' bar-only':iF?' bar-start':iL?' bar-end':' bar-mid';
             if(iF&&cL)cls+=' clip-left';
             if(iL&&cR)cls+=' clip-right';
-            html+=`<td class="gantt-day-cell${isTd?' today-col':''}" title="${esc(ttip)}"><div class="${cls}" style="background:${barColor};position:relative">${iF?`<span style="position:absolute;left:4px;right:0;overflow:hidden;white-space:nowrap;font-size:9px;line-height:18px;font-weight:700;color:${txtColor}">${esc(item.Task)}</span>`:''}</div></td>`;
+            html+=`<td class="gantt-day-cell${isTd?' today-col':''}" style="${iF?'position:relative;overflow:visible':''}" title="${esc(ttip)}"><div class="${cls}" style="background:${barColor}"></div>${iF?txtSpan:''}</td>`;
           }else{
             html+=`<td class="gantt-day-cell${isTd?' today-col':''}"></td>`;
           }
@@ -958,7 +960,10 @@ async function fetchData(){
     if(!res.ok)throw new Error('HTTP '+res.status);
     const parsed=rowsToObjects(parseCSV(await res.text()));
     // Normalise first-column header regardless of sheet name
-    parsed.forEach(i=>{ if(!i.Task&&i['Column 1']) i.Task=i['Column 1']; });
+    parsed.forEach(i=>{
+      if(!i.Task&&i['Column 1']) i.Task=i['Column 1'];
+      if(!i['Labor Cost']&&i['Labor Cost (XCD)']) i['Labor Cost']=i['Labor Cost (XCD)'];
+    });
     allItems=parsed.filter(i=>i.Task);
     document.getElementById('loading-state').classList.remove('visible');
     buildFilterRows();updateStats();updateBanners();updateCharts();render();populateOwnerDropdown();
