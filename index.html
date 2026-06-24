@@ -143,6 +143,8 @@
     .gantt-legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11px; color: var(--muted); }
     .gantt-leg { display: flex; align-items: center; gap: 5px; }
     .gantt-leg-dot { width: 12px; height: 12px; border-radius: 3px; }
+    .gantt-owner-row td { background: #f1f5f9 !important; }
+    .gantt-owner-cell { font-size: 11px; font-weight: 700; padding: 5px 12px; color: var(--text); letter-spacing: .3px; border-bottom: 1px solid var(--border); }
     .gantt-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); }
     .gantt-table  { min-width: 100%; border-collapse: collapse; }
     .gantt-table th { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--muted); background: #f9fafb; border-bottom: 1px solid var(--border); padding: 6px 4px; text-align: center; white-space: nowrap; }
@@ -163,9 +165,12 @@
     .bar-only   { border-radius: 3px; }
     .clip-left  { border-left: 3px solid rgba(0,0,0,.3); }
     .clip-right { border-right: 3px dashed rgba(0,0,0,.3); }
-    .pbar-critical { background: #ef4444; } .pbar-high    { background: #f59e0b; }
-    .pbar-medium   { background: #3b82f6; } .pbar-low     { background: #9ca3af; }
-    .pbar-none     { background: #d1d5db; } .pbar-done    { background: #86efac !important; }
+    .pbar-scheduled  { background: #3b82f6; }
+    .pbar-inprogress { background: #86efac; }
+    .pbar-completed  { background: #166534; }
+    .pbar-questions  { background: #3b82f6; }
+    .pbar-inplanning { background: #fbbf24; }
+    .pbar-default    { background: #d1d5db; }
     .gantt-today-hdr { background: rgba(37,99,235,.15) !important; color: var(--blue) !important; font-weight: 800 !important; }
     .gantt-empty { text-align: center; padding: 40px; color: var(--muted); font-size: 13px; }
 
@@ -343,11 +348,11 @@
       <button class="gantt-nav-btn" id="gantt-next">Next →</button>
       <div style="margin-left:auto">
         <div class="gantt-legend">
-          <div class="gantt-leg"><div class="gantt-leg-dot pbar-critical"></div>Critical</div>
-          <div class="gantt-leg"><div class="gantt-leg-dot pbar-high"></div>High</div>
-          <div class="gantt-leg"><div class="gantt-leg-dot pbar-medium"></div>Medium</div>
-          <div class="gantt-leg"><div class="gantt-leg-dot pbar-low"></div>Low</div>
-          <div class="gantt-leg"><div class="gantt-leg-dot pbar-done"></div>Completed</div>
+          <div class="gantt-leg"><div class="gantt-leg-dot pbar-scheduled"></div>Scheduled</div>
+          <div class="gantt-leg"><div class="gantt-leg-dot pbar-inprogress"></div>In Progress</div>
+          <div class="gantt-leg"><div class="gantt-leg-dot pbar-completed"></div>Completed</div>
+          <div class="gantt-leg"><div class="gantt-leg-dot pbar-inplanning"></div>In Planning</div>
+          <div class="gantt-leg"><div class="gantt-leg-dot pbar-questions"></div>Questions</div>
         </div>
       </div>
     </div>
@@ -355,7 +360,7 @@
       <table class="gantt-table" id="gantt-table"></table>
     </div>
     <div style="font-size:10px;color:var(--muted);margin-top:8px;">
-      Shows: Scheduled · In Progress · Completed &nbsp;|&nbsp; ◀ solid left border = started before this month &nbsp;|&nbsp; dashed right border = ends after this month
+      Shows: Scheduled · In Progress · Completed · In Planning · Questions &nbsp;|&nbsp; Task name color = Priority &nbsp;|&nbsp; ◀ solid left border = started before this month &nbsp;|&nbsp; dashed right border = ends after this month
     </div>
   </section>
 </div>
@@ -696,9 +701,27 @@ function updateCharts(){
 }
 
 // ── Gantt ──────────────────────────────────────────────────────────────────────
-function ganttStatusOk(item){const sn=nm(item.Status);return sn.includes('complet')||sn==='inprogress'||sn==='scheduled';}
-const PBAR={critical:'pbar-critical',high:'pbar-high',medium:'pbar-medium',low:'pbar-low'};
-function pBarCls(item){return isComplete(item)?'pbar-done':(PBAR[(item.Priority||'').toLowerCase()]||'pbar-none');}
+function ganttStatusOk(item){
+  const sn=nm(item.Status);
+  return sn.includes('complet')||sn==='inprogress'||sn==='scheduled'||sn==='questions'||sn==='inplanning';
+}
+function ganttBarColor(item){
+  const sn=nm(item.Status);
+  if(sn.includes('complet')) return '#166534';
+  if(sn==='inprogress')      return '#86efac';
+  if(sn==='scheduled')       return '#3b82f6';
+  if(sn==='questions')       return '#3b82f6';
+  if(sn==='inplanning')      return '#fbbf24';
+  return '#d1d5db';
+}
+function ganttPriorityTextColor(item){
+  const p=(item.Priority||'').toLowerCase();
+  if(p==='critical') return '#dc2626';
+  if(p==='high')     return '#f472b6';
+  if(p==='medium')   return '#92400e';
+  if(p==='low')      return '#78350f';
+  return '#6b7280';
+}
 
 function renderGantt(){
   const now=new Date();
@@ -722,47 +745,59 @@ function renderGantt(){
     return e>=mStart&&e<=mEnd;
   });
 
-  tasks.sort((a,b)=>{
+  // Group by owner, sort within group by start date
+  const ownerGroups={};
+  tasks.forEach(item=>{
+    const o=item.Owner||'Unassigned';
+    if(!ownerGroups[o])ownerGroups[o]=[];
+    ownerGroups[o].push(item);
+  });
+  Object.values(ownerGroups).forEach(arr=>arr.sort((a,b)=>{
     const da=parseDate(a['Scheduled Start'])||parseDate(a['Est Completion Date']);
     const db=parseDate(b['Scheduled Start'])||parseDate(b['Est Completion Date']);
     if(!da&&!db)return 0;if(!da)return 1;if(!db)return-1;return da-db;
-  });
+  }));
+  const ownerNames=Object.keys(ownerGroups).sort();
 
   const days=Array.from({length:dim},(_,i)=>i+1);
-  let html=`<thead><tr><th class="name-col">Task</th>`;
+  let html=`<thead><tr><th class="name-col">Owner</th>`;
   days.forEach(d=>html+=`<th class="gantt-day-cell${d===todayDay?' gantt-today-hdr':''}">${d}</th>`);
   html+=`</tr></thead><tbody>`;
 
   if(!tasks.length){
-    html+=`<tr><td colspan="${dim+1}" class="gantt-empty">No scheduled, in-progress, or completed tasks this month.</td></tr>`;
+    html+=`<tr><td colspan="${dim+1}" class="gantt-empty">No tasks to display this month.</td></tr>`;
   }else{
-    tasks.forEach(item=>{
-      const s=parseDate(item['Scheduled Start']),e=parseDate(item['Est Completion Date']);
-      let bs,be,cL=false,cR=false;
-      if(s&&e){
-        bs=s<mStart?(cL=true,1):s.getDate();
-        be=e>mEnd  ?(cR=true,dim):e.getDate();
-      }else if(s){bs=be=s>=mStart?s.getDate():(cL=true,1);}
-      else{bs=be=e<=mEnd?e.getDate():(cR=true,dim);}
-      bs=Math.max(1,Math.min(bs,dim));be=Math.max(bs,Math.min(be,dim));
-      const bc=pBarCls(item);
-      const ttip=`${item.Task} | ${item.Status} | ${item.Priority||'—'}`;
-
-      html+=`<tr><td class="name-col" title="${esc(item.Task)}">${esc(item.Task)}</td>`;
-      days.forEach(d=>{
-        const isTd=d===todayDay;
-        if(d>=bs&&d<=be){
-          const iF=d===bs,iL=d===be;
-          let cls=`gantt-bar-seg ${bc}`;
-          cls+=iF&&iL?' bar-only':iF?' bar-start':iL?' bar-end':' bar-mid';
-          if(iF&&cL)cls+=' clip-left';
-          if(iL&&cR)cls+=' clip-right';
-          html+=`<td class="gantt-day-cell${isTd?' today-col':''}"><div class="${cls}" title="${esc(ttip)}"></div></td>`;
-        }else{
-          html+=`<td class="gantt-day-cell${isTd?' today-col':''}"></td>`;
-        }
+    ownerNames.forEach(owner=>{
+      const group=ownerGroups[owner];
+      html+=`<tr class="gantt-owner-row"><td class="gantt-owner-cell" colspan="${dim+1}">${esc(owner)} <span style="font-weight:400;opacity:.6">${group.length} task${group.length!==1?'s':''}</span></td></tr>`;
+      group.forEach(item=>{
+        const s=parseDate(item['Scheduled Start']),e=parseDate(item['Est Completion Date']);
+        let bs,be,cL=false,cR=false;
+        if(s&&e){
+          bs=s<mStart?(cL=true,1):s.getDate();
+          be=e>mEnd  ?(cR=true,dim):e.getDate();
+        }else if(s){bs=be=s>=mStart?s.getDate():(cL=true,1);}
+        else{bs=be=e<=mEnd?e.getDate():(cR=true,dim);}
+        bs=Math.max(1,Math.min(bs,dim));be=Math.max(bs,Math.min(be,dim));
+        const barColor=ganttBarColor(item);
+        const txtColor=ganttPriorityTextColor(item);
+        const ttip=`${item.Task} | ${item.Status} | ${item.Priority||'—'} | ${item.Owner||'—'}`;
+        html+=`<tr><td class="name-col" style="background:var(--bg)"></td>`;
+        days.forEach(d=>{
+          const isTd=d===todayDay;
+          if(d>=bs&&d<=be){
+            const iF=d===bs,iL=d===be;
+            let cls='gantt-bar-seg';
+            cls+=iF&&iL?' bar-only':iF?' bar-start':iL?' bar-end':' bar-mid';
+            if(iF&&cL)cls+=' clip-left';
+            if(iL&&cR)cls+=' clip-right';
+            html+=`<td class="gantt-day-cell${isTd?' today-col':''}" title="${esc(ttip)}"><div class="${cls}" style="background:${barColor};position:relative">${iF?`<span style="position:absolute;left:4px;right:0;overflow:hidden;white-space:nowrap;font-size:9px;line-height:18px;font-weight:700;color:${txtColor}">${esc(item.Task)}</span>`:''}</div></td>`;
+          }else{
+            html+=`<td class="gantt-day-cell${isTd?' today-col':''}"></td>`;
+          }
+        });
+        html+=`</tr>`;
       });
-      html+=`</tr>`;
     });
   }
   html+=`</tbody>`;
