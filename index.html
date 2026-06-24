@@ -187,6 +187,47 @@
     .summary-spinner { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; padding: 20px 0; }
     .summary-error   { color: var(--red); font-size: 13px; padding: 10px 0; }
 
+    /* ── Log Requests ── */
+    .log-form-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-sm); padding: 20px 24px; margin-bottom: 18px; }
+    .log-form-title { font-size: 14px; font-weight: 700; margin-bottom: 14px; }
+    .log-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; }
+    @media (max-width: 560px) { .log-form-grid { grid-template-columns: 1fr; } }
+    .log-field { display: flex; flex-direction: column; gap: 4px; }
+    .log-field.full-width { grid-column: 1 / -1; }
+    .log-label { font-size: 10px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--muted); }
+    .log-label .req { color: var(--red); margin-left: 2px; }
+    .log-input, .log-select, .log-textarea {
+      border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px;
+      font-size: 12px; font-family: inherit; color: var(--text); outline: none;
+      background: var(--card); transition: border-color .12s;
+    }
+    .log-input:focus, .log-select:focus, .log-textarea:focus { border-color: var(--blue); }
+    .log-input.error, .log-select.error { border-color: var(--red); }
+    .log-textarea { resize: vertical; min-height: 64px; }
+    .log-checkboxes { display: flex; gap: 20px; flex-wrap: wrap; align-items: center; padding: 4px 0; }
+    .log-check-item { display: flex; align-items: center; gap: 7px; font-size: 12px; cursor: pointer; user-select: none; }
+    .log-check-item input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--blue); cursor: pointer; }
+    .log-submit-row { margin-top: 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .log-submit-btn { background: var(--blue); border: 1px solid var(--blue); border-radius: 6px; padding: 7px 18px; font-size: 12px; font-weight: 600; color: #fff; cursor: pointer; }
+    .log-submit-btn:hover { background: #1d4ed8; }
+    .log-error-msg { font-size: 11px; color: var(--red); }
+    .log-success-msg { font-size: 11px; color: var(--teal); }
+    .log-list-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 6px; }
+    .log-list-title { font-size: 13px; font-weight: 600; }
+    .log-clear-btn { border: 1px solid var(--border); border-radius: 6px; padding: 3px 10px; font-size: 11px; background: none; cursor: pointer; color: var(--muted); }
+    .log-clear-btn:hover { background: #f3f4f6; color: var(--red); border-color: var(--red); }
+    .log-empty { text-align: center; padding: 32px; color: var(--muted); font-size: 13px; }
+    .log-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 11px 13px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 7px; }
+    .log-card-header { display: flex; align-items: flex-start; gap: 7px; }
+    .log-card-title { font-size: 12px; font-weight: 600; line-height: 1.4; flex: 1; }
+    .log-card-badges { display: flex; flex-wrap: wrap; gap: 3px; justify-content: flex-end; flex-shrink: 0; }
+    .badge-close  { background: #d1fae5; color: #065f46; }
+    .badge-help   { background: #dbeafe; color: #1e40af; }
+    .badge-logged { background: #ede9fe; color: #5b21b6; }
+    .log-card-meta { display: flex; flex-wrap: wrap; gap: 3px 10px; font-size: 10px; color: var(--muted); }
+    .log-card-notes { font-size: 10px; color: var(--muted); line-height: 1.5; border-top: 1px solid var(--border); padding-top: 6px; }
+    .log-char-count { font-size: 10px; color: var(--muted); text-align: right; }
+
     /* ── States ── */
     #loading-state, #error-state, #empty-state { display: none; text-align: center; padding: 40px 24px; color: var(--muted); font-size: 13px; }
     #loading-state.visible, #error-state.visible, #empty-state.visible { display: block; }
@@ -267,6 +308,7 @@
     <button class="nav-btn" id="schedule-btn">📅 Schedule</button>
     <button class="nav-btn" id="summary-btn">📋 Summary</button>
     <button class="nav-btn" id="reports-btn">📊 Reports</button>
+    <button class="nav-btn" id="logrequests-btn">📝 Log</button>
   </div>
 </div>
 
@@ -332,6 +374,48 @@
         <p style="color:var(--muted);font-size:13px;">Enter your API key above and click Generate to produce an AI-written executive summary of current property status.</p>
       </div>
     </div>
+  </section>
+</div>
+
+<!-- Log Requests subpage -->
+<div class="subpage" id="logrequests-page">
+  <section>
+    <div class="log-form-card">
+      <div class="log-form-title">Submit a Request</div>
+      <div class="log-form-grid">
+        <div class="log-field">
+          <label class="log-label">Task <span class="req">*</span></label>
+          <input type="text" id="log-task" class="log-input" placeholder="Brief description" maxlength="30">
+          <div class="log-char-count"><span id="log-task-count">0</span>/30</div>
+        </div>
+        <div class="log-field">
+          <label class="log-label">Owner <span class="req">*</span></label>
+          <select id="log-owner" class="log-select">
+            <option value="">— Select owner —</option>
+          </select>
+        </div>
+        <div class="log-field full-width">
+          <label class="log-label">Request Type</label>
+          <div class="log-checkboxes">
+            <label class="log-check-item"><input type="checkbox" id="log-close"> Close Request</label>
+            <label class="log-check-item"><input type="checkbox" id="log-help"> Help Request</label>
+          </div>
+        </div>
+        <div class="log-field full-width">
+          <label class="log-label">Notes</label>
+          <textarea id="log-notes" class="log-textarea" placeholder="Optional additional context…"></textarea>
+        </div>
+      </div>
+      <div class="log-submit-row">
+        <button class="log-submit-btn" id="log-submit-btn">Submit Request</button>
+        <span id="log-form-msg"></span>
+      </div>
+    </div>
+    <div class="log-list-header">
+      <div class="log-list-title">Logged Requests <span id="log-count" style="font-weight:400;color:var(--muted)"></span></div>
+      <button class="log-clear-btn" id="log-clear-btn">Clear all</button>
+    </div>
+    <div id="log-cards-container"></div>
   </section>
 </div>
 
@@ -487,12 +571,13 @@ function scrollToQueue(){
 
 // ── Page routing ───────────────────────────────────────────────────────────────
 const PAGES={
-  dashboard: document.getElementById('dashboard-page'),
-  reports:   document.getElementById('reports-page'),
-  schedule:  document.getElementById('schedule-page'),
-  summary:   document.getElementById('summary-page'),
+  dashboard:   document.getElementById('dashboard-page'),
+  reports:     document.getElementById('reports-page'),
+  schedule:    document.getElementById('schedule-page'),
+  summary:     document.getElementById('summary-page'),
+  logrequests: document.getElementById('logrequests-page'),
 };
-const NAV_IDS={reports:'reports-btn',schedule:'schedule-btn',summary:'summary-btn'};
+const NAV_IDS={reports:'reports-btn',schedule:'schedule-btn',summary:'summary-btn',logrequests:'logrequests-btn'};
 
 function showPage(page){
   currentPage=page;
@@ -502,9 +587,10 @@ function showPage(page){
   });
   Object.entries(NAV_IDS).forEach(([k,id])=>document.getElementById(id).classList.toggle('active',k===page));
   if(page==='schedule')renderGantt();
+  if(page==='logrequests'){populateOwnerDropdown();renderLogCards();}
 }
 
-['reports','schedule','summary'].forEach(page=>{
+['reports','schedule','summary','logrequests'].forEach(page=>{
   document.getElementById(NAV_IDS[page]).addEventListener('click',()=>{
     showPage(currentPage===page?'dashboard':page);
   });
@@ -837,7 +923,7 @@ async function fetchData(){
     if(!res.ok)throw new Error('HTTP '+res.status);
     allItems=rowsToObjects(parseCSV(await res.text())).filter(i=>i.Task);
     document.getElementById('loading-state').classList.remove('visible');
-    buildFilterRows();updateStats();updateBanners();updateCharts();render();
+    buildFilterRows();updateStats();updateBanners();updateCharts();render();populateOwnerDropdown();
     if(currentPage==='schedule')renderGantt();
   }catch(err){
     console.error(err);
@@ -894,6 +980,99 @@ document.querySelectorAll('.stat-card').forEach(card=>{
     if(activeStatCard===s){activeStatCard=null;clearAllFilters(false);return;}
     activeStatCard=s;(statPresets[s]||(() => {}))();updateStatCardActive();
   });
+});
+
+// ── Log Requests ───────────────────────────────────────────────────────────────
+const LOG_KEY = 'ws_log_requests';
+
+function loadLogRequests(){ try{ return JSON.parse(localStorage.getItem(LOG_KEY)||'[]'); }catch(e){ return []; } }
+function saveLogRequests(arr){ localStorage.setItem(LOG_KEY, JSON.stringify(arr)); }
+
+function populateOwnerDropdown(){
+  const sel = document.getElementById('log-owner');
+  const owners = [...new Set(allItems.map(i=>i.Owner).filter(Boolean))].sort();
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">— Select owner —</option>';
+  owners.forEach(o=>{ const opt=document.createElement('option'); opt.value=opt.textContent=o; sel.appendChild(opt); });
+  if(cur) sel.value = cur;
+}
+
+function renderLogCards(){
+  const requests = loadLogRequests();
+  const container = document.getElementById('log-cards-container');
+  const countEl = document.getElementById('log-count');
+  countEl.textContent = requests.length ? `(${requests.length})` : '';
+  if(!requests.length){
+    container.innerHTML = '<div class="log-empty">No requests logged yet.</div>';
+    return;
+  }
+  container.innerHTML = `<div class="cards-grid">${[...requests].reverse().map(r=>{
+    const badges = [
+      `<span class="badge badge-logged">Logged</span>`,
+      r.closeRequest ? `<span class="badge badge-close">Close Request</span>` : '',
+      r.helpRequest  ? `<span class="badge badge-help">Help Request</span>`  : '',
+    ].join('');
+    return `<div class="log-card">
+      <div class="log-card-header">
+        <div class="log-card-title">${esc(r.task)}</div>
+        <div class="log-card-badges">${badges}</div>
+      </div>
+      <div class="log-card-meta">
+        <span class="meta-pill"><span class="meta-pill-label">Owner</span> ${esc(r.owner)}</span>
+        <span class="meta-pill"><span class="meta-pill-label">Logged</span> ${esc(r.timestamp)}</span>
+      </div>
+      ${r.notes ? `<div class="log-card-notes">${esc(r.notes)}</div>` : ''}
+    </div>`;
+  }).join('')}</div>`;
+}
+
+document.getElementById('log-task').addEventListener('input', function(){
+  document.getElementById('log-task-count').textContent = this.value.length;
+});
+
+document.getElementById('log-submit-btn').addEventListener('click', ()=>{
+  const taskEl  = document.getElementById('log-task');
+  const ownerEl = document.getElementById('log-owner');
+  const msgEl   = document.getElementById('log-form-msg');
+  const task  = taskEl.value.trim();
+  const owner = ownerEl.value;
+
+  taskEl.classList.remove('error');
+  ownerEl.classList.remove('error');
+  msgEl.textContent = '';
+
+  let valid = true;
+  if(!task){  taskEl.classList.add('error');  valid=false; }
+  if(!owner){ ownerEl.classList.add('error'); valid=false; }
+  if(!valid){ msgEl.className='log-error-msg'; msgEl.textContent='Please fill in required fields.'; return; }
+
+  const entry = {
+    task,
+    owner,
+    closeRequest: document.getElementById('log-close').checked,
+    helpRequest:  document.getElementById('log-help').checked,
+    notes: document.getElementById('log-notes').value.trim(),
+    timestamp: new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'}),
+  };
+  const arr = loadLogRequests();
+  arr.push(entry);
+  saveLogRequests(arr);
+
+  taskEl.value=''; ownerEl.value='';
+  document.getElementById('log-close').checked=false;
+  document.getElementById('log-help').checked=false;
+  document.getElementById('log-notes').value='';
+  document.getElementById('log-task-count').textContent='0';
+  msgEl.className='log-success-msg'; msgEl.textContent='Request logged!';
+  setTimeout(()=>{ msgEl.textContent=''; }, 3000);
+  renderLogCards();
+});
+
+document.getElementById('log-clear-btn').addEventListener('click', ()=>{
+  if(!loadLogRequests().length) return;
+  if(!confirm('Clear all logged requests? This cannot be undone.')) return;
+  saveLogRequests([]);
+  renderLogCards();
 });
 
 // Restore saved API key
