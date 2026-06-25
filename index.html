@@ -783,7 +783,7 @@ function renderGantt(){
         const txtColor=ganttPriorityTextColor(item);
         const ttip=`${item.Task} | ${item.Status} | ${item.Priority||'—'} | ${item.Owner||'—'}`;
         const barCells=be-bs+1;
-        const txtSpan=`<span style="position:absolute;left:4px;top:50%;transform:translateY(-50%);max-width:calc(${barCells}*26px - 8px);overflow:hidden;white-space:nowrap;font-size:11px;font-weight:700;color:${txtColor};z-index:5;pointer-events:none;line-height:1">${esc(item.Task)}</span>`;
+        const txtSpan=`<span style="position:absolute;left:4px;top:50%;transform:translateY(-50%);white-space:nowrap;font-size:11px;font-weight:700;color:${txtColor};z-index:5;pointer-events:none;line-height:1">${esc(item.Task)}</span>`;
         html+=`<tr><td class="name-col" style="background:var(--bg)"></td>`;
         days.forEach(d=>{
           const isTd=d===todayDay;
