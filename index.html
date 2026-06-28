@@ -192,6 +192,10 @@
     .summary-spinner { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; padding: 20px 0; }
     .summary-error   { color: var(--red); font-size: 13px; padding: 10px 0; }
 
+    /* ── Back button ── */
+    .subpage-back { display: inline-flex; align-items: center; gap: 5px; margin: 12px var(--px) 0; border: 1px solid var(--border); border-radius: 6px; padding: 5px 12px; font-size: 11px; font-weight: 600; color: var(--muted); background: var(--card); cursor: pointer; }
+    .subpage-back:hover { background: #f3f4f6; color: var(--text); }
+
     /* ── Log Requests ── */
     .log-form-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-sm); padding: 20px 24px; margin-bottom: 18px; }
     .log-form-title { font-size: 14px; font-weight: 700; margin-bottom: 14px; }
@@ -319,6 +323,7 @@
 
 <!-- Reports subpage -->
 <div class="subpage" id="reports-page">
+  <button class="subpage-back" onclick="showPage('dashboard')">← Dashboard</button>
   <section>
     <div class="charts-grid">
       <div class="chart-card">
@@ -341,6 +346,7 @@
 
 <!-- Schedule subpage -->
 <div class="subpage" id="schedule-page">
+  <button class="subpage-back" onclick="showPage('dashboard')">← Dashboard</button>
   <section>
     <div class="gantt-nav">
       <button class="gantt-nav-btn" id="gantt-prev">← Prev</button>
@@ -367,6 +373,7 @@
 
 <!-- Summary subpage -->
 <div class="subpage" id="summary-page">
+  <button class="subpage-back" onclick="showPage('dashboard')">← Dashboard</button>
   <section>
     <div class="summary-card">
       <div class="summary-api-row">
@@ -384,6 +391,7 @@
 
 <!-- Log Requests subpage -->
 <div class="subpage" id="logrequests-page">
+  <button class="subpage-back" onclick="showPage('dashboard')">← Dashboard</button>
   <section>
     <div class="log-form-card">
       <div class="log-form-title">Submit a Request</div>
